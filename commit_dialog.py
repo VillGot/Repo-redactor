@@ -1,7 +1,8 @@
 import sys
+import os
 
 import subprocess
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 
 class Ui_CommitDialog(object):
@@ -36,6 +37,7 @@ class Ui_CommitDialog(object):
         self.add_button.setObjectName("add_button")
         self.add_button.clicked.connect(self.add_file)
         self.repo_path = repo_path
+        self.main_w = None
 
         self.retranslateUi(Dialog)
         self.buttonBox.accepted.connect(Dialog.accept)
@@ -45,28 +47,52 @@ class Ui_CommitDialog(object):
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
         Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
-        self.branch_label.setText(_translate("Dialog", "TextLabel"))
-        self.add_label.setText(_translate("Dialog", "TextLabel"))
-        self.comment_label.setText(_translate("Dialog", "TextLabel"))
+        self.branch_label.setText(_translate("Dialog", "branch"))
+        self.add_label.setText(_translate("Dialog", "add"))
+        self.comment_label.setText(_translate("Dialog", "description"))
         self.add_button.setText(_translate("Dialog", "add"))
     
     def accept(self):
-        branch = self.branch_menu.currentText()
-        desc = self.textEdit.toPlainText()
-        result1 = subprocess.run(['git', 'checkout', branch])
-        result2 = subprocess.run(['git', 'commit', '-m', f'"{desc}"'])
+        try:
+            branch = self.branch_menu.currentText()
+            desc = self.textEdit.toPlainText()
+            if not branch.startswith('* '):
+                result1 = subprocess.run(['git', 'checkout', branch])
+            if desc != '':
+                result2 = subprocess.run(['git', 'commit', '-m', f'"{desc}"'])
+            else:
+                resilt2 = subprocess.run(['git', 'commit'])
+            self.main_w.statusbar.showMessage('sucsessfuly commited')
+        except subprocess.CalledProcessError:
+            self.main_w.statusbar.showMessage('something went wrong, try again later')
+        self.main_w.rerender()
         self.reject()
     
     def set_branches(self):
+        os.chdir(self.repo_path)
         branches = subprocess.check_output('git branch -a').decode('utf-8').split('\n')
         for i in branches:
-            self.branch_menu.addItem(i)
+            if not ('remotes/' in i or i == ''):
+                self.branch_menu.addItem(i)
         
 
     def add_file(self):
-        file_path = QtWidgets.QFileDialog.getOpenFileName(self, 'select file to add', '')
-        if file_path != '':
-            res = subprocess.run(['git', 'add', file_path])
+        file_path = QtWidgets.QFileDialog.getOpenFileName(self, 'select file to add', '')[0]
+        print(file_path)
+        try:
+            if file_path != '':
+                res = subprocess.run(['git', 'add', file_path.split('/')[-1]])
+                print(res.returncode, 'aboba')
+        except FileNotFoundError:
+            message = 'something went wrong while adding files, try again later'
+            self.main_w.statusbar.showMessage(message)
+            self.main_w.rerender()
+            self.reject()
+        except subprocess.CalledProcessError:
+            message = 'something went wrong while adding, try again later'
+            self.main_w.statusbar.showMessage(message)
+            self.main_w.rerender()
+            self.reject()
 
 
 class CommitDialog(QtWidgets.QDialog, Ui_CommitDialog):

@@ -3,7 +3,7 @@ import os
 
 import subprocess
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 
 
@@ -45,7 +45,8 @@ class Ui_MainWindow(object):
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
-        self.file_list.itemDoubleClicked.connect(self.essene_open)
+        self.commit_tree.setReadOnly(True)
+        self.commit_info.setReadOnly(True)
 
         self.commit_dialog = commit_dialog
         self.edit_window = edit_file_window
@@ -57,6 +58,7 @@ class Ui_MainWindow(object):
         self.get_info_btn.clicked.connect(self.get_info_on_commit)
         self.checkout_btn.clicked.connect(self.checkout_dialog)
         self.file_list_btn.clicked.connect(self.dot_dot_slash)
+        self.file_list.itemDoubleClicked.connect(self.essene_open)
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -80,6 +82,7 @@ class Ui_MainWindow(object):
     
     def create_commit_dialog(self):
         self.commit_dialog.repo_path = self.repo_path
+        self.commit_dialog.main_w = self
         self.commit_dialog.set_branches()
         self.commit_dialog.show()
     
@@ -89,18 +92,28 @@ class Ui_MainWindow(object):
             os.chdir(self.repo_path)
             hash = self.lineEdit.text()
             res = subprocess.run(['git', 'checkout', hash])
+            if res.returncode == 0:
+                self.statusbar.showMessage(f'sucsess. command "git checkout {hash}" completed')
+            else:
+                self.statusbar.showMessage(f'wrong commit hash')
             return None
 
     def get_info_on_commit(self):
         hash = self.lineEdit.text()
         os.chdir(self.repo_path)
-        info = subprocess.check_output(f'git log -n 1 {hash}').decode('utf-8')
-        self.commit_info.setText(info)
-    
+        try:
+            info = subprocess.check_output(f'git log -n 1 {hash}').decode('utf-8')
+            self.commit_info.setText(info)
+        except subprocess.CalledProcessError:
+            self.statusbar.showMessage('wrong commit hash')
+        
     def get_dir_content(self, dir_path):
-        os.chdir(dir_path)
-        res = os.listdir(dir_path)
-        return res
+        try:
+            os.chdir(dir_path)
+            res = os.listdir(dir_path)
+            return res
+        except FileNotFoundError:
+            return []
     
     def show_list_dir(self, dir_path):
         res = self.get_dir_content(dir_path)
@@ -125,11 +138,18 @@ class Ui_MainWindow(object):
             
         
     def open_edit_window(self, file_path):
-        with open(file_path, 'r', encoding='utf-8') as file:
-            text = file.read()
-            self.edit_window.textEdit.setText(text)
-            self.edit_window.file_path = file_path
-        self.edit_window.show()
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                text = file.read()
+                self.edit_window.textEdit.setText(text)
+                self.edit_window.file_path = file_path
+            self.edit_window.show()
+        except FileNotFoundError or FileExistsError:
+            self.statusbar.showMessage('there is no such file')
+        except UnicodeDecodeError:
+            self.statusbar.showMessage('you can\'t decode this file in utf-8')
+        
+
 
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):

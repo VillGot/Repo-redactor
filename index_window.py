@@ -1,7 +1,7 @@
 import sys
 import subprocess
 import os
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 
 class Ui_IndexWindow(object):
@@ -79,29 +79,36 @@ class Ui_IndexWindow(object):
     
     def open_repo(self):
         #print(f'cd {self.open_path_line.text()}')
-        os.chdir(self.open_path_line.text())
-        
-        # res2 = subprocess.check_output('git status').decode('cp866').split('\n')
-        res2 = subprocess.run(['git', 'status'])
+        try:
+            os.chdir(self.open_path_line.text())
+            res2 = subprocess.run(['git', 'status'])
 
         #print(res2)
-        if res2.returncode == 0:
-            print('ABOBA')
-            self.main_window.repo_path = self.open_path_line.text()
-            self.main_window.path_now = self.main_window.repo_path
-            self.go_to_main()
+            if res2.returncode == 0:
+                self.main_window.repo_path = self.open_path_line.text()
+                self.main_window.path_now = self.main_window.repo_path
+                self.go_to_main()
+            else:
+                self.error_label.setText('Repozitory hasn\'t initialized in this directory yet')
+        except FileNotFoundError:
+            self.error_label.setText('there is no such path to directory')
+        # res2 = subprocess.check_output('git status').decode('cp866').split('\n')
+        
         #if 'not a git repository' not in res2:
             #print('ABOBA')
         
     def init_repo(self):
-        os.chdir(self.init_path_line.text())
-        res2 = subprocess.run(['git', 'status'])
-        #  print(res2.returncode)
-        if res2.returncode == 128:
-            print('ABOBA22')
-            self.main_window.repo_path = self.init_path_line.text()
-            self.main_window.path_now = self.main_window.repo_path
-            self.go_to_main()
+        try:
+            os.chdir(self.init_path_line.text())
+            res = subprocess.run(['git', 'status'])
+            #  print(res2.returncode)
+            if res.returncode == 128:
+                res = subprocess.run(['git', 'init'])
+                self.main_window.repo_path = self.init_path_line.text()
+                self.main_window.path_now = self.main_window.repo_path
+                self.go_to_main()
+        except FileNotFoundError:
+            self.error_label.setText('Repozitory has already initialized in this directory')
     
     def go_to_main(self):
         self.main_window.rerender()

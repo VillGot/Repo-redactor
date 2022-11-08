@@ -5,9 +5,9 @@ from index_window import IndexWindow, Ui_IndexWindow
 from edit_file_window import EditFileWindow, Ui_EditFileWindow
 
 import sys
-import subprocess
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+
+from PyQt5 import QtWidgets
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
