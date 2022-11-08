@@ -8,13 +8,13 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 
 class Ui_MainWindow(object):
-    def setupUi(self, MainWindow, commit_dialog, repo_path):
+    def setupUi(self, MainWindow, commit_dialog, edit_file_window, repo_path):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1130, 787)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.file_list = QtWidgets.QListWidget(self.centralwidget)
-        self.file_list.setGeometry(QtCore.QRect(10, 30, 121, 721))
+        self.file_list.setGeometry(QtCore.QRect(10, 30, 181, 721))
         self.file_list.setObjectName("file_list")
         self.file_list_btn = QtWidgets.QPushButton(self.centralwidget)
         self.file_list_btn.setGeometry(QtCore.QRect(10, -1, 51, 31))
@@ -29,7 +29,7 @@ class Ui_MainWindow(object):
         self.checkout_btn.setGeometry(QtCore.QRect(1000, 100, 101, 31))
         self.checkout_btn.setObjectName("checkout_btn")
         self.commit_tree = QtWidgets.QTextEdit(self.centralwidget)
-        self.commit_tree.setGeometry(QtCore.QRect(150, 30, 721, 671))
+        self.commit_tree.setGeometry(QtCore.QRect(210, 30, 661, 671))
         self.commit_tree.setObjectName("commit_info_2")
         self.lineEdit = QtWidgets.QLineEdit(self.centralwidget)
         self.lineEdit.setGeometry(QtCore.QRect(900, 50, 201, 31))
@@ -45,9 +45,10 @@ class Ui_MainWindow(object):
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
-        #  self.file_list.doubleClicked.connect(self.essene_open)
+        self.file_list.itemDoubleClicked.connect(self.essene_open)
 
         self.commit_dialog = commit_dialog
+        self.edit_window = edit_file_window
         
         self.repo_path = repo_path
         self.path_now = repo_path
@@ -88,7 +89,6 @@ class Ui_MainWindow(object):
             os.chdir(self.repo_path)
             hash = self.lineEdit.text()
             res = subprocess.run(['git', 'checkout', hash])
-
             return None
 
     def get_info_on_commit(self):
@@ -99,33 +99,49 @@ class Ui_MainWindow(object):
     
     def get_dir_content(self, dir_path):
         os.chdir(dir_path)
-        cont = subprocess.check_output('dir').decode('utf-8').split('\n')
-        for i in cont:
-            if dir_path in cont:
-                cont = cont[i + 4:-2]
-                break
-        res = []
-        for i in cont:
-            if '<DIR>' in i:
-                res.append(i.split()[-1] + ' <DIR>')
-            else:
-                res.append(i.split()[-1])
+        res = os.listdir(dir_path)
         return res
     
-    def dot_dot_slash(self):
-        print(self.get_dir_content(self.repo_path))
+    def show_list_dir(self, dir_path):
+        res = self.get_dir_content(dir_path)
+        self.file_list.clear()
+        for i in res:
+            self.file_list.addItem(i)
 
+    def dot_dot_slash(self):
+        os.chdir(self.path_now)
+        os.chdir('..')
+        self.path_now = os.getcwd()
+        self.show_list_dir(self.path_now)
+    
+    def essene_open(self, item):
+        essene_name = item.text()
+        try:
+            croc = os.listdir(os.path.join(self.path_now, essene_name))
+            self.path_now = os.path.join(self.path_now, essene_name)    
+            self.show_list_dir(self.path_now)
+        except NotADirectoryError:
+            self.open_edit_window(os.path.join(self.path_now, essene_name))
+            
+        
+    def open_edit_window(self, file_path):
+        with open(file_path, 'r', encoding='utf-8') as file:
+            text = file.read()
+            self.edit_window.textEdit.setText(text)
+            self.edit_window.file_path = file_path
+        self.edit_window.show()
 
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
-    def __init__(self, commit_dialog, repo_path=''):
+    def __init__(self, commit_dialog, edit_file_window, repo_path=''):
         super().__init__()
-        self.setupUi(self, commit_dialog, repo_path)
+        self.setupUi(self, commit_dialog, edit_file_window, repo_path)
     
     def rerender(self):
         self.setWindowTitle(self.repo_path)
         tree = subprocess.check_output('git log --all --graph --oneline --abbrev-commit')
         tree = tree.decode('utf-8')
+        self.show_list_dir(self.repo_path)
         self.commit_tree.setText(tree)
 
 

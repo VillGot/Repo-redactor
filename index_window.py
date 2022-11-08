@@ -88,6 +88,7 @@ class Ui_IndexWindow(object):
         if res2.returncode == 0:
             print('ABOBA')
             self.main_window.repo_path = self.open_path_line.text()
+            self.main_window.path_now = self.main_window.repo_path
             self.go_to_main()
         #if 'not a git repository' not in res2:
             #print('ABOBA')
@@ -99,7 +100,8 @@ class Ui_IndexWindow(object):
         if res2.returncode == 128:
             print('ABOBA22')
             self.main_window.repo_path = self.init_path_line.text()
-            self.go_to_main
+            self.main_window.path_now = self.main_window.repo_path
+            self.go_to_main()
     
     def go_to_main(self):
         self.main_window.rerender()
